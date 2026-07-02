@@ -35,7 +35,7 @@ public class ServiceController {
     @PutMapping("/{id}")
     public ResponseEntity<ServiceResponseDto> updateService(
             @PathVariable Long id,
-            @RequestBody ServiceRequestDto requestDto) {
+            @Valid @RequestBody ServiceRequestDto requestDto) {
         return ResponseEntity.ok(maintenanceService.updateService(id, requestDto));
     }
 }

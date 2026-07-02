@@ -76,8 +76,24 @@ public class MaintenanceService {
         }
 
         if (requestDto.getStatus() != null) {
-            ServiceStatus newStatus = ServiceStatus.valueOf(requestDto.getStatus().toUpperCase());
-            // Triggers state machine validation and concurrency checks
+            ServiceStatus newStatus;
+            try {
+                newStatus = ServiceStatus.valueOf(requestDto.getStatus().toUpperCase());
+            } catch (IllegalArgumentException e) {
+                throw new com.rabam.carservice.exception.InvalidTransitionException(
+                        "Invalid status value provided: '" + requestDto.getStatus() +
+                        "'. Valid values are PENDING, IN_PROGRESS, DONE.");
+            }
+
+            // Lock the parent Car row for the duration of this transaction (SELECT ... FOR UPDATE).
+            // This serializes any concurrent request trying to move another service of the SAME
+            // car into IN_PROGRESS, so the max-2-active count check inside validateAndTransition
+            // always sees an up-to-date, consistent count instead of racing with another transaction.
+            carRepository.findByIdForUpdate(service.getCar().getId())
+                    .orElseThrow(() -> new ResourceNotFoundException(
+                            "Car not found with id: " + service.getCar().getId()));
+
+            // Triggers state machine validation and the now race-safe concurrency check
             serviceManager.validateAndTransition(service, newStatus);
         }
 

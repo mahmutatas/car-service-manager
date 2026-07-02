@@ -16,15 +16,16 @@ public class ServiceManager {
 
     /**
      * Case Requirement 3: Centralized State Machine for Service Transitions.
-     * Valid transitions: PENDING -> IN_PROGRESS -> DONE (forward only, no skipping)
+     * Valid transitions: PENDING -> IN_PROGRESS -> DONE (forward only, no skipping,
+     * no going backward, no re-entering the same state).
+     *
+     * NOTE: the max-2-active-per-car check below only prevents the race condition
+     * if the caller has already acquired a pessimistic lock on the parent Car row
+     * (see CarRepository.findByIdForUpdate). This method assumes it is called
+     * within that locked transaction.
      */
     public void validateAndTransition(Service service, ServiceStatus newStatus) {
         ServiceStatus currentStatus = service.getStatus();
-
-        // If trying to change to the exact same status, ignore or block depending on interpretation
-        if (currentStatus == newStatus) {
-            return;
-        }
 
         boolean isValid = false;
 
@@ -46,15 +47,22 @@ public class ServiceManager {
 
         if (!isValid) {
             throw new InvalidTransitionException(
-                String.format("Invalid status transition attempted: %s -> %s. Transitions must go forward without skipping.", currentStatus, newStatus)
+                String.format(
+                    "Invalid status transition attempted: %s -> %s. " +
+                    "Only forward transitions are allowed (PENDING -> IN_PROGRESS -> DONE), " +
+                    "with no skipping, no going backward, and no re-entering the same state.",
+                    currentStatus, newStatus
+                )
             );
         }
 
-        // Case Requirement 5: Concurrency Safety - Max 2 active services per car
         if (newStatus == ServiceStatus.IN_PROGRESS) {
-            long activeCount = serviceRepository.countByCarIdAndStatus(service.getCar().getId(), ServiceStatus.IN_PROGRESS);
+            long activeCount = serviceRepository.countByCarIdAndStatus(
+                    service.getCar().getId(), ServiceStatus.IN_PROGRESS);
             if (activeCount >= 2) {
-                throw new MaxActiveServicesException("Cannot activate service. This car already has 2 active services (IN_PROGRESS).");
+                throw new MaxActiveServicesException(
+                    "Cannot activate service. This car already has 2 active services (IN_PROGRESS)."
+                );
             }
         }
 

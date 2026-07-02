@@ -5,6 +5,7 @@ import com.rabam.carservice.dto.AuditEventDto;
 import com.rabam.carservice.dto.CarRequestDto;
 import com.rabam.carservice.dto.CarResponseDto;
 import com.rabam.carservice.entity.Car;
+import com.rabam.carservice.exception.DuplicateLicensePlateException;
 import com.rabam.carservice.exception.ResourceNotFoundException;
 import com.rabam.carservice.repository.CarRepository;
 import lombok.RequiredArgsConstructor;
@@ -29,10 +30,9 @@ public class CarService {
 
     @Transactional
     public CarResponseDto createCar(CarRequestDto requestDto) {
-        // Case Requirement 2b: Unique license plate check
+        // Fast-path check: covers the common case with a clear message.
         if (carRepository.existsByLicensePlate(requestDto.getLicensePlate())) {
-            // Will be caught by GlobalExceptionHandler to return 409 Conflict
-            throw new IllegalStateException("CONFLICT: License plate already exists");
+            throw new DuplicateLicensePlateException(requestDto.getLicensePlate());
         }
 
         Car car = new Car();
@@ -40,35 +40,47 @@ public class CarService {
         car.setModel(requestDto.getModel());
         car.setBrand(requestDto.getBrand());
 
-        Car savedCar = carRepository.save(car);
+        Car savedCar;
+        try {
+            // The DB-level unique constraint on licensePlate is the real source of truth:
+            // it protects against the race where two requests with the same plate both
+            // pass the existsByLicensePlate() check above at nearly the same time.
+            // saveAndFlush forces the constraint check to happen here, inside the try block,
+            // instead of silently at transaction commit after this method has returned.
+            savedCar = carRepository.saveAndFlush(car);
+        } catch (org.springframework.dao.DataIntegrityViolationException e) {
+            throw new DuplicateLicensePlateException(requestDto.getLicensePlate());
+        }
+
         CarResponseDto responseDto = mapToResponseDto(savedCar);
-
-        // Case Requirement 6: Publish domain event to RabbitMQ
         publishEvent("CAR_CREATED", "Car", savedCar.getId(), responseDto);
-
         return responseDto;
     }
+
 
     @Transactional
     public CarResponseDto updateCar(Long id, CarRequestDto requestDto) {
         Car car = carRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Car not found with id: " + id));
 
-        // Check uniqueness if license plate is changing
-        if (!car.getLicensePlate().equals(requestDto.getLicensePlate()) && 
+        if (!car.getLicensePlate().equals(requestDto.getLicensePlate()) &&
             carRepository.existsByLicensePlate(requestDto.getLicensePlate())) {
-            throw new IllegalStateException("CONFLICT: License plate already exists");
+            throw new DuplicateLicensePlateException(requestDto.getLicensePlate());
         }
 
         car.setBrand(requestDto.getBrand());
         car.setModel(requestDto.getModel());
         car.setLicensePlate(requestDto.getLicensePlate());
 
-        Car updatedCar = carRepository.save(car);
+        Car updatedCar;
+        try {
+            updatedCar = carRepository.saveAndFlush(car);
+        } catch (org.springframework.dao.DataIntegrityViolationException e) {
+            throw new DuplicateLicensePlateException(requestDto.getLicensePlate());
+        }
+
         CarResponseDto responseDto = mapToResponseDto(updatedCar);
-
         publishEvent("CAR_UPDATED", "Car", updatedCar.getId(), responseDto);
-
         return responseDto;
     }
 
