@@ -1,8 +1,6 @@
 package com.rabam.carservice.config;
 
 import org.springframework.amqp.core.*;
-import org.springframework.amqp.support.converter.Jackson2JsonMessageConverter;
-import org.springframework.amqp.support.converter.MessageConverter;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
@@ -26,11 +24,5 @@ public class RabbitMQConfig {
     @Bean
     public Binding auditBinding(Queue auditQueue, TopicExchange auditExchange) {
         return BindingBuilder.bind(auditQueue).to(auditExchange).with(ROUTING_KEY);
-    }
-
-    // Crucial for sending messages as JSON objects automatically
-    @Bean
-    public MessageConverter jsonMessageConverter() {
-        return new Jackson2JsonMessageConverter();
     }
 }
