@@ -89,7 +89,7 @@ Service status transitions are validated in a single place (`ServiceManager`), n
 
 ## 🔮 Product Roadmap (Future Functional Improvements)
 
-To evolve this case study into an enterprise-grade Garage Management System (GMS), the following business features are planned:
+The following improvements are features that can be added to the application.
 
 ### 1. Customer Relationship & Notifications (CRM)
 - **Owner Profiles:** Link vehicles to customer accounts with contact details.
