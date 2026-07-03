@@ -17,17 +17,10 @@ Requires Docker Desktop.
 docker compose up --build
 ```
 
-This brings up MySQL, RabbitMQ, and the backend in the correct order, using healthchecks so each service only starts once its dependency is actually ready (not just started). The API is available at `http://localhost:8080`.
+This brings up MySQL, RabbitMQ, the backend, and the frontend, in the correct order, using healthchecks so each service only starts once its dependency is actually ready (not just started).
 
-**Frontend (currently run separately, see "Known Gaps" below):**
-
-```bash
-cd frontend
-npm install
-npm run dev
-```
-
-Available at `http://localhost:5173`.
+- Frontend: `http://localhost:3000`
+- Backend API: `http://localhost:8080`
 
 Verify the backend is up:
 
@@ -35,7 +28,7 @@ Verify the backend is up:
 curl http://localhost:8080/actuator/health
 ```
 
-Config (DB credentials, ports, RabbitMQ credentials) is driven entirely by environment variables — see `.env.example`. Copy it to `.env` and adjust if needed; docker-compose reads it automatically.
+Config (DB credentials, ports, RabbitMQ credentials, API base URL) is driven entirely by environment variables — see `.env.example`. Copy it to `.env` and adjust if needed; docker-compose reads it automatically.
 
 ## How to Run Tests
 
@@ -84,11 +77,3 @@ Service status transitions are validated in a single place (`ServiceManager`), n
 - Used `@RestControllerAdvice` for centralized error handling rather than per-controller try/catch, so every endpoint returns errors in the same shape.
 - Used a pessimistic lock (`SELECT ... FOR UPDATE`) rather than a DB-level constraint (e.g. a partial unique index) for the max-2-active rule, since the rule is a *count* threshold rather than a simple uniqueness rule, which doesn't map cleanly onto a unique constraint.
 - Frontend uses plain component state (no Redux/React Query) given the app's small scope; each list re-fetches on a simple trigger counter rather than a caching layer.
-
-## Known Gaps / What I'd Do With More Time
-
-- **Frontend is not yet containerized** — it currently runs via `npm run dev` rather than through `docker compose up`. Given more time, next step is a frontend Dockerfile (multi-stage: Vite build + nginx) and a `frontend` service in `docker-compose.yaml`.
-- Add pagination controls in the UI (backend already supports it).
-- Add more edge-case tests around the audit log consumer.
-- Add an index on `services(car_id, status)` to keep the active-count query fast as data grows.
-- Add request rate limiting and basic auth/authorization, out of scope for this case study but a real shop tool would need it.
