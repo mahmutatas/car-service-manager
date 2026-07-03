@@ -51,8 +51,10 @@ Tests run against an in-memory H2 database (MySQL compatibility mode), so no Doc
 | PUT | `/api/services/{id}` | Partial update: title, description, and/or status |
 
 ![GET and POST Cars](docs/screenshots/add-and-get-cars.png)
+
 ![GET, POST and PUT Services](docs/screenshots/add-update-and-get-services.png)
-![EDIT and FILTER Services](edit-and-filter-services.png)
+
+![EDIT and FILTER Services](docs/screenshots/edit-and-filter-services.png)
 
 License plate format: 2-5 uppercase alphanumeric characters per segment, with up to two optional `-` or space separated segments (e.g. `34ABC123`, `34-ABC-123`). Chosen to be generic rather than modeling one specific country's exact rules.
 
@@ -66,7 +68,7 @@ Service status transitions are validated in a single place (`ServiceManager`), n
 
 **Max 2 active services per car (Requirement 5):** Before transitioning a service to `IN_PROGRESS`, the request first acquires a pessimistic write lock on the parent `Car` row (`SELECT ... FOR UPDATE`, via `CarRepository.findByIdForUpdate`) inside the same transaction. This serializes any concurrent requests trying to activate a service for the *same* car — the second request blocks until the first transaction commits, so the active-count check it then performs always reflects an up-to-date count instead of racing with an in-flight transaction. Proven by `MaxActiveServicesRaceConditionTest`, which fires two concurrent activation attempts at the same car via `ExecutorService` + `CountDownLatch` and asserts exactly one succeeds and the final count never exceeds 2. Also manually verified through the actual UI.
 
-![Max 2 active services per car](max-active-2-services.png)
+![Max 2 active services per car](docs/screenshots/max-active-2-services.png)
 
 **Duplicate license plate (Requirement 2b):** Checked at the service layer for a fast, clear error message, and backed by a DB-level unique constraint as the real source of truth — `saveAndFlush` surfaces a constraint violation inside the same request instead of at a later, uncontrolled point, and it's translated into a `409` with a clear message.
 
