@@ -86,3 +86,22 @@ Service status transitions are validated in a single place (`ServiceManager`), n
 - Used `@RestControllerAdvice` for centralized error handling rather than per-controller try/catch, so every endpoint returns errors in the same shape.
 - Used a pessimistic lock (`SELECT ... FOR UPDATE`) rather than a DB-level constraint (e.g. a partial unique index) for the max-2-active rule, since the rule is a *count* threshold rather than a simple uniqueness rule, which doesn't map cleanly onto a unique constraint.
 - Frontend uses plain component state (no Redux/React Query) given the app's small scope; each list re-fetches on a simple trigger counter rather than a caching layer.
+
+## 🔮 Product Roadmap (Future Functional Improvements)
+
+To evolve this case study into an enterprise-grade Garage Management System (GMS), the following business features are planned:
+
+### 1. Customer Relationship & Notifications (CRM)
+- **Owner Profiles:** Link vehicles to customer accounts with contact details.
+- **Automated Alerts:** Trigger asynchronous SMS/Email alerts via RabbitMQ when a service status changes (e.g., "Your car is ready for pickup!").
+
+### 2. Inventory & Invoicing
+- **Spare Parts Management:** Track stock levels for common items (oil filters, brake pads) and automatically deduct inventory upon service execution.
+- **Cost Calculation:** Generate itemized digital invoices calculating parts cost + labor fee when a service enters the `DONE` state.
+
+### 3. Smart Scheduling
+- **Calendar View:** A visual dashboard for service advisors to book and manage appointments.
+- **Bay/Mechanic Allocation:** Prevent overbooking by checking physical workshop capacity (available lifts/mechanics) before moving a service to `IN_PROGRESS`.
+
+### 4. Vehicle Health Timeline
+- **Service Book:** A comprehensive, immutable historical log of all past services for each vehicle to diagnose recurring issues easily.
