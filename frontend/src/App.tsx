@@ -1,14 +1,21 @@
 import { useState } from 'react';
 import CarForm from './components/CarForm';
 import CarList from './components/CarList';
+import ServiceForm from './components/ServiceForm';
+import ServiceList from './components/ServiceList';
 import type { Car } from './types/car';
 
 function App() {
-  const [refreshTrigger, setRefreshTrigger] = useState(0);
+  const [carRefreshTrigger, setCarRefreshTrigger] = useState(0);
+  const [serviceRefreshTrigger, setServiceRefreshTrigger] = useState(0);
   const [selectedCar, setSelectedCar] = useState<Car | null>(null);
 
   function handleCarCreated() {
-    setRefreshTrigger((prev) => prev + 1);
+    setCarRefreshTrigger((prev) => prev + 1);
+  }
+
+  function handleServiceCreated() {
+    setServiceRefreshTrigger((prev) => prev + 1);
   }
 
   return (
@@ -20,17 +27,18 @@ function App() {
       <hr />
 
       <CarList
-        refreshTrigger={refreshTrigger}
+        refreshTrigger={carRefreshTrigger}
         selectedCarId={selectedCar?.id ?? null}
         onSelectCar={setSelectedCar}
       />
 
-      {selectedCar && (
-        <div style={{ marginTop: 24 }}>
-          <h3>Services for {selectedCar.licensePlate}</h3>
-          <p>(Service list will go here next)</p>
-        </div>
-      )}
+      <hr />
+
+      <ServiceForm onServiceCreated={handleServiceCreated} defaultCarId={selectedCar?.id ?? null} />
+
+      <hr />
+
+      <ServiceList selectedCarId={selectedCar?.id ?? null} refreshTrigger={serviceRefreshTrigger} />
     </div>
   );
 }
