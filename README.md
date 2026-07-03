@@ -16,7 +16,7 @@ Requires Docker Desktop.
 ```bash
 docker compose up --build
 ```
-![Docker compose](docs/screenshots/docker-compose up brings up all components with a single command.png)
+![Docker compose](docs/screenshots/docker-compose.png)
 
 This brings up MySQL, RabbitMQ, the backend, and the frontend, in the correct order, using healthchecks so each service only starts once its dependency is actually ready (not just started).
 
